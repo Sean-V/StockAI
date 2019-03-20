@@ -33,13 +33,16 @@ if 'update' in ARGS:
 	#here we are going to define our data set as the top x results when looking at the utility industry under Yahoo Finance website as of 3/18/2019 at 4:21 P.M. 
 	numberOfTickers = 0 #for testing purposes
 	stocksFile = open('tickerSymbols.csv', 'r')
-	tickers = stocksFile.read().split()
+	tickersAndNamesData = stocksFile.read().split()
+	tickersAndNames = []
+	for pair in tickersAndNamesData:
+		tickersAndNames.append(pair.split(','))
 	stocksFile.close()
 	stockDict = {}
 	#define training data
 	trainingData = pd.DataFrame()
 	failedData = []
-	for ticker in tickers:
+	for ticker, companyName in tickersAndNames:
 		numberOfTickers += 1
 		try:
 			trainingData = pdr.get_data_yahoo(ticker, '2018-01-01', '2019-01-01', False, 'ticker', False, True)
@@ -73,9 +76,9 @@ if 'update' in ARGS:
 	print("Failed to process tickers: {}.".format(failedData))	
 	#purge failed data
 	stocksFile = open('tickerSymbols.csv', 'w')
-	for ticker in tickers:
+	for ticker, companyName in tickersAndNames:
 		if ticker not in failedData:
-			stocksFile.write(str(ticker) + '\n')
+			stocksFile.write(str(ticker) + ',' + str(companyName) + '\n')
 	stocksFile.close()
 else:
 	print("Training data not updated.")

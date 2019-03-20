@@ -1,9 +1,19 @@
 #run this code to clean up data gathered from yahoo finance downloader
+#THIS FUNCTION TAKES THE INPUT OF THE CSV PRODUCED BY THE YAHOO FINANCE DOWNLOADER
+#Files arleady cleaned cannot be passed back into this function
+
 import pandas as pd 
 
-stocks = pd.read_csv('tickerSymbols.csv')
-tickers = list(stocks['Ticker'].values)
-stocksFile = open('tickerSymbols.csv', 'w')
-for ticker in tickers:
-	stocksFile.write(str(ticker) + '\n')
-stocksFile.close()
+def cleanData(filename):
+	stocks = pd.read_csv(filename)
+	tickers = list(stocks['Ticker'].values)
+	companyNames = list(stocks['Name'].values)
+	stocksFile = open(filename, 'w')
+	for index in range(len(stocks)):
+		try:
+			stocksFile.write(str(tickers[index]) + ',' + str(companyNames[index]) + '\n')
+		except:
+			pass
+	stocksFile.close()
+
+cleanData('generic.csv')
