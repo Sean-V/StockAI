@@ -1,3 +1,5 @@
+#import random to get random trades
+import random
 #import usability of graphs
 import matplotlib.pyplot as plt
 #import out custom stock class
@@ -48,7 +50,7 @@ if 'update' in ARGS:
 			stock = Stock(ticker)
 			for datatype in data:
 				for index, datapoint in enumerate(data[datatype]):
-					stock.addDataPoint(datatype, [data.index[index].date().strftime('%Y-%m-%d'), datapoint])
+					stock.addDataPoint(datatype, [data.index[index].date(), datapoint])
 			#do training with stock
 			stockDict[ticker] = stock
 		
@@ -64,17 +66,37 @@ if 'train' in ARGS:
 	stockDict = pickle.load(DataFile)
 	DataFile.close()
 	trainDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[:5]}
-	#first we need to define our current resource pool
-	currentMoney = 100000
-	ownedStocks = []
-	#for each stock
-	for ticker in trainDict:
-		#get current date and price for the stock
-		for index, [date, price] in enumerate(trainDict[ticker].getDataType('Open')[251:]):
-			#get general trend for past 30 data points
-			trend = ((price - trainDict[ticker].getDataType('Open')[251+index-30][1]) > 0)
-			
-	
+	table = []
+
+	#create a loop to buy and sell 100 stocks
+	for i in range(100):
+		#random buy and sell
+		randomStock = random.choice(tickers[:5])
+		buyStock = random.randint(30,500)
+		sellStock = random.randint(buyStock+1,501)
+		#get general trend for past 30 data points
+		trend = ((trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-30][1]) > 0)
+		#up from previous data point
+		previous = ((trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-1][1]) > 0)
+		#sentiment analysis
+		sentiment = True #placeholder until nick finishes code for this
+		#see if stock was held more than 30 days
+		longHold = ((trainDict[randomStock].getDataType('Open')[sellStock][0] - trainDict[randomStock].getDataType('Open')[buyStock][0]).days > 30)
+
+		#add features to dictionary
+		features = {
+			"trend" : trend,
+			"previous" : previous,
+			"sentiment" : sentiment,
+			"longHold" : longHold
+		}
+
+		#total profit
+		profit = (trainDict[randomStock].getDataType('Open')[buyStock][1] < trainDict[randomStock].getDataType('Open')[sellStock][1])
+		#add buy data to table
+		table.append([features, profit])
+
+
 #only do this if we want to test our data
 if 'test' in ARGS:
 	#get stock dictionary of classes
