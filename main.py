@@ -32,10 +32,11 @@ tickers = ["ATVI","LMT","NKE","NFLX","AMZN","AAL","AAPL","INTC","NVDA","NOC"]
 #only do this if we want to update training dataset
 if 'update' in ARGS:
 	data = pd.DataFrame()
+	stock = None
 	stockDict = {}
 	for ticker in tickers:
 		try:
-			data = pdr.get_data_yahoo(ticker, '2018-01-01', '2019-01-01', False, 'ticker', False, True)
+			data = pdr.get_data_yahoo(ticker, '2017-01-01', '2019-01-01', False, 'ticker', False, True)
 		except:
 			data = {}
 			print("Failed to acquire data for ticker {}.".format(ticker))
@@ -43,16 +44,18 @@ if 'update' in ARGS:
 			print("Successfully processed ticker {}.".format(ticker))
 			#get data to work with
 			#store data as a class
+			del stock
 			stock = Stock(ticker)
 			for datatype in data:
 				for index, datapoint in enumerate(data[datatype]):
 					stock.addDataPoint(datatype, [data.index[index].date().strftime('%Y-%m-%d'), datapoint])
 			#do training with stock
 			stockDict[ticker] = stock
+		
 	#store stockDict with pickle
-	trainingDataFile = open('Data.pickle', 'wb')
-	pickle.dump(stockDict, trainingDataFile)
-	trainingDataFile.close()
+	DataFile = open('Data.pickle', 'wb')
+	pickle.dump(stockDict, DataFile)
+	DataFile.close()
 
 #only do this if we want to train the data
 if 'train' in ARGS:
@@ -61,6 +64,16 @@ if 'train' in ARGS:
 	stockDict = pickle.load(DataFile)
 	DataFile.close()
 	trainDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[:5]}
+	#first we need to define our current resource pool
+	currentMoney = 100000
+	ownedStocks = []
+	#for each stock
+	for ticker in trainDict:
+		#get current date and price for the stock
+		for index, [date, price] in enumerate(trainDict[ticker].getDataType('Open')[251:]):
+			#get general trend for past 30 data points
+			trend = ((price - trainDict[ticker].getDataType('Open')[251+index-30][1]) > 0)
+			
 	
 #only do this if we want to test our data
 if 'test' in ARGS:

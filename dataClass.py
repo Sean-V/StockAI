@@ -1,10 +1,10 @@
 #let's define a class to store our different stocks in as well as operational functions
 class Stock():
 	#initialization of a stock
-	def __init__(self, ticker, data = {}):
+	def __init__(self, ticker):
 		self.ticker = ticker
 		#define dictionary to store data
-		self.data = data
+		self.data = {}
 
 	#define function to return stock ticker
 	def getTicker(self):
