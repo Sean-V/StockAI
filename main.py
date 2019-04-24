@@ -49,8 +49,23 @@ if 'update' in ARGS:
 					stock.addDataPoint(datatype, [data.index[index].date().strftime('%Y-%m-%d'), datapoint])
 			#do training with stock
 			stockDict[ticker] = stock
-			print(stockDict)
 	#store stockDict with pickle
-	trainingDataFile = open('trainingData.pickle', 'wb')
+	trainingDataFile = open('Data.pickle', 'wb')
 	pickle.dump(stockDict, trainingDataFile)
 	trainingDataFile.close()
+
+#only do this if we want to train the data
+if 'train' in ARGS:
+	#get stock dictionary of classes
+	DataFile = open('Data.pickle', 'rb')
+	stockDict = pickle.load(DataFile)
+	DataFile.close()
+	trainDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[:5]}
+	
+#only do this if we want to test our data
+if 'test' in ARGS:
+	#get stock dictionary of classes
+	DataFile = open('Data.pickle', 'rb')
+	stockDict = pickle.load(DataFile)
+	DataFile.close()
+	trainDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[5:]}
