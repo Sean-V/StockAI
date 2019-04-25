@@ -37,6 +37,7 @@ if 'update' in ARGS:
 	stock = None
 	stockDict = {}
 	for ticker in tickers:
+		#attempt to grab data from yahoo finance
 		try:
 			data = pdr.get_data_yahoo(ticker, '2017-01-01', '2019-01-01', False, 'ticker', False, True)
 		except:
@@ -59,6 +60,8 @@ if 'update' in ARGS:
 	pickle.dump(stockDict, DataFile)
 	DataFile.close()
 
+	print("Update Done")
+
 #only do this if we want to train the data
 if 'train' in ARGS:
 	#get stock dictionary of classes
@@ -69,7 +72,7 @@ if 'train' in ARGS:
 	table = []
 
 	#create a loop to buy and sell 100 stocks
-	for i in range(100):
+	for i in range(1000000):
 		#random buy and sell
 		randomStock = random.choice(tickers[:5])
 		buyStock = random.randint(30,500)
@@ -79,23 +82,25 @@ if 'train' in ARGS:
 		#up from previous data point
 		previous = ((trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-1][1]) > 0)
 		#sentiment analysis
-		sentiment = True #placeholder until nick finishes code for this
-		#see if stock was held more than 30 days
-		longHold = ((trainDict[randomStock].getDataType('Open')[sellStock][0] - trainDict[randomStock].getDataType('Open')[buyStock][0]).days > 30)
+		sentiment = random.choice([True, False]) #placeholder until nick finishes code for this
 
 		#add features to dictionary
 		features = {
 			"trend" : trend,
 			"previous" : previous,
-			"sentiment" : sentiment,
-			"longHold" : longHold
+			"sentiment" : sentiment
 		}
 
 		#total profit
 		profit = (trainDict[randomStock].getDataType('Open')[buyStock][1] < trainDict[randomStock].getDataType('Open')[sellStock][1])
-		#add buy data to table
+		
 		table.append([features, profit])
+	#add buy data to table
+	TestFile = open('Test.pickle', 'wb')
+	pickle.dump(table, TestFile)
+	TestFile.close()
 
+	print("Training Done")
 
 #only do this if we want to test our data
 if 'test' in ARGS:
@@ -103,4 +108,39 @@ if 'test' in ARGS:
 	DataFile = open('Data.pickle', 'rb')
 	stockDict = pickle.load(DataFile)
 	DataFile.close()
-	trainDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[5:]}
+	#get testing data
+	testDict = {stock:stockDict[stock] for stock in stockDict if stock in tickers[5:]}
+	#get table to compare states with
+	TestFile = open('Test.pickle', 'rb')
+	table = list(pickle.load(TestFile))
+	TestFile.close()
+	
+	#initialize resource pool
+	currentMoney = 100000
+	currentStocks = []
+
+	#test each stock to see if we want to buy it
+	for ticker in tickers[5:]:
+		#get current state
+		inDate = datetime.today()
+		currentPrice = pdr.get_data_yahoo(ticker, inDate, inDate.today(), False, 'ticker', False, True)["Open"][0]
+		yesterdayPrice = pdr.get_data_yahoo(ticker, (inDate.today()-timedelta(1)).strftime('%Y-%m-%d'), (inDate.today()-timedelta(1)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+		trendPrice = pdr.get_data_yahoo(ticker, (inDate.today()-timedelta(30)).strftime('%Y-%m-%d'), (inDate.today()-timedelta(30)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+		#get general trend for past 30 data points
+		trend = ((currentPrice - trendPrice) > 0)
+		#up from previous data point
+		previous = (currentPrice - yesterdayPrice > 0)
+		#sentiment analysis
+		sentiment = random.choice([True, False]) #placeholder until nick finishes code for this
+		#add features to dictionary
+		features = {
+			"trend" : trend,
+			"previous" : previous,
+			"sentiment" : sentiment
+		}
+		#count hits
+		positive = table.count([features, True])/len(table)
+		negative = table.count([features, False])/len(table)
+		print(ticker, positive, negative)
+
+	print('Testing Done')
