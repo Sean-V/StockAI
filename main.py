@@ -122,14 +122,30 @@ if 'test' in ARGS:
 	#test each stock to see if we want to buy it
 	for ticker in tickers[5:]:
 		#get current state
-		inDate = datetime.today()
-		currentPrice = pdr.get_data_yahoo(ticker, inDate, inDate.today(), False, 'ticker', False, True)["Open"][0]
-		yesterdayPrice = pdr.get_data_yahoo(ticker, (inDate.today()-timedelta(1)).strftime('%Y-%m-%d'), (inDate.today()-timedelta(1)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
-		trendPrice = pdr.get_data_yahoo(ticker, (inDate.today()-timedelta(30)).strftime('%Y-%m-%d'), (inDate.today()-timedelta(30)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+		inDate = datetime.today()-timedelta(0)
+		try:
+			currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0]
+		except:
+			print("Stock Market Closed")
+			sys.exit()
+		deltaChange = 0
+		while(1):
+			try:
+				previousPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+				break
+			except:
+				deltaChange += 1
+		deltaChange = 0
+		while(1):
+			try:	
+				trendPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+				break
+			except:
+				deltaChange += 1
 		#get general trend for past 30 data points
 		trend = ((currentPrice - trendPrice) > 0)
 		#up from previous data point
-		previous = (currentPrice - yesterdayPrice > 0)
+		previous = (currentPrice - previousPrice > 0)
 		#sentiment analysis
 		sentiment = random.choice([True, False]) #placeholder until nick finishes code for this
 		#add features to dictionary
@@ -141,6 +157,6 @@ if 'test' in ARGS:
 		#count hits
 		positive = table.count([features, True])/len(table)
 		negative = table.count([features, False])/len(table)
-		print(ticker, positive, negative)
+		print(ticker, positive, negative, positive/negative)
 
 	print('Testing Done')
