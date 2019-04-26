@@ -81,8 +81,6 @@ if 'train' in ARGS:
 		trend = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-30][1]) 
 		#up from previous data point
 		previous = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-1][1]) 
-		#sentiment analysis
-		sentiment = (random.randint(0,100) - random.randint(0,100)) #placeholder until nick finishes code for this
 		maxDiff = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('High')[buyStock][1])
 		minDiff = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Low')[buyStock][1])
 		maxMin = (trainDict[randomStock].getDataType('Low')[buyStock][1] - trainDict[randomStock].getDataType('High')[buyStock][1])
@@ -93,7 +91,6 @@ if 'train' in ARGS:
 		features = {
 			"trend" : trend,
 			"previous" : previous,
-			"sentiment" : sentiment,
 			"maxDiff" : maxDiff,
 			"minDiff" : minDiff,
 			"maxMin" : maxMin,
@@ -128,7 +125,7 @@ if 'test' in ARGS:
 	#test each stock to see if we want to buy it
 	for ticker in tickers[5:]:
 		#get current state we want to look at
-		inDate = datetime.today()-timedelta(3)
+		inDate = datetime.today()-timedelta(1)
 		#gather relevant variables
 		try:
 			currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)
@@ -155,8 +152,6 @@ if 'test' in ARGS:
 		trend = (currentPrice['Open'][0] - trendPrice)
 		#up from previous data point
 		previous = (currentPrice['Open'][0] - previousPrice)
-		#sentiment analysis
-		sentiment = (random.randint(0,100) - random.randint(1,100)) #placeholder until nick finishes code for this
 		maxDiff = (currentPrice['Open'][0] - currentPrice['High'][0])
 		minDiff = (currentPrice['Open'][0] - currentPrice['Low'][0])
 		maxMin =  (currentPrice['Low'][0] - currentPrice['High'][0])
@@ -169,11 +164,10 @@ if 'test' in ARGS:
 			#list differences
 			diffTrend = trend - entry['trend']
 			diffPrevious = previous - entry['previous']
-			diffSentiment = sentiment - entry['sentiment']
 			diffMaxDiff = maxDiff - entry['maxDiff']
 			diffMinDiff = minDiff - entry['minDiff']
 			diffMaxMin = maxMin - entry['maxMin']
-			difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffSentiment) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin))/500
+			difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin))/400
 			if difference < diffChecker:
 				diffChecker = difference
 				mostSimilarEntry = entry
