@@ -78,21 +78,21 @@ if 'train' in ARGS:
 		buyStock = random.randint(30,500)
 		sellStock = random.randint(buyStock+1,501)
 		#get general trend for past 30 data points
-		trend = ((trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-30][1]) > 0)
+		trend = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-30][1]) 
 		#up from previous data point
-		previous = ((trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-1][1]) > 0)
+		previous = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Open')[buyStock-1][1]) 
 		#sentiment analysis
-		sentiment = random.choice([True, False]) #placeholder until nick finishes code for this
+		sentiment = (random.randint(0,100) - random.randint(0,100)) #placeholder until nick finishes code for this
+		#total profit
+		profit = (trainDict[randomStock].getDataType('Open')[sellStock][1] - trainDict[randomStock].getDataType('Open')[buyStock][1])
 
 		#add features to dictionary
 		features = {
 			"trend" : trend,
 			"previous" : previous,
-			"sentiment" : sentiment
+			"sentiment" : sentiment,
+			"profit" : profit
 		}
-
-		#total profit
-		profit = (trainDict[randomStock].getDataType('Open')[buyStock][1] < trainDict[randomStock].getDataType('Open')[sellStock][1])
 		
 		table.append([features, profit])
 	#add buy data to table
@@ -118,15 +118,17 @@ if 'test' in ARGS:
 	#initialize resource pool
 	currentMoney = 100000
 	currentStocks = []
-
+	print(table)
+	print("\n")
 	#test each stock to see if we want to buy it
 	for ticker in tickers[5:]:
-		#get current state
-		inDate = datetime.today()-timedelta(0)
+		#get current state we want to look at
+		inDate = datetime.today()-timedelta(500)
+		#gather relevant variables
 		try:
 			currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0]
 		except:
-			print("Stock Market Closed")
+			print("Data Unavailable: Try Different Date")
 			sys.exit()
 		deltaChange = 0
 		while(1):
@@ -143,20 +145,25 @@ if 'test' in ARGS:
 			except:
 				deltaChange += 1
 		#get general trend for past 30 data points
-		trend = ((currentPrice - trendPrice) > 0)
+		trend = (currentPrice - trendPrice)
 		#up from previous data point
-		previous = (currentPrice - previousPrice > 0)
+		previous = (currentPrice - previousPrice)
 		#sentiment analysis
-		sentiment = random.choice([True, False]) #placeholder until nick finishes code for this
-		#add features to dictionary
-		features = {
-			"trend" : trend,
-			"previous" : previous,
-			"sentiment" : sentiment
-		}
-		#count hits
-		positive = table.count([features, True])/len(table)
-		negative = table.count([features, False])/len(table)
-		print(ticker, positive, negative, positive/negative)
+		sentiment = (random.randint(0,100) - random.randint(1,10)) #placeholder until nick finishes code for this
+		
+		#now let us find closest match between test data and our trained model
+		mostSimilarEntry = None
+		diffChecker = float('inf')
+		profit = -float('inf')
+		for entry, result in table[:5]:
+			diffTrend = trend - entry['trend']
+			diffPrevious = previous - entry['previous']
+			diffSentiment = sentiment - entry['sentiment']
+			difference = (abs(diffTrend) + abs(diffPrevious) + random.random())/100
+			if difference < diffChecker:
+				diffChecker = difference
+				mostSimilarEntry = entry
+				profit = entry['profit']
+		print(diffChecker, mostSimilarEntry)
 
 	print('Testing Done')
