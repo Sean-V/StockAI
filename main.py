@@ -121,56 +121,73 @@ if 'test' in ARGS:
 	#initialize resource pool
 	currentMoney = 100000
 	currentStocks = []
+	goodBuys = 0
 
-	#test each stock to see if we want to buy it
-	for ticker in tickers[5:]:
-		#get current state we want to look at
-		inDate = datetime.today()-timedelta(1)
-		#gather relevant variables
-		try:
-			currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)
-		except:
-			print("Data Unavailable: Try Different Date")
-			sys.exit()
-		deltaChange = 0
-		while(1):
+	#run through a year of data
+	for day in range(1,365):
+		print("progress: " + str(day))
+		print("good buys: " + str(goodBuys))
+		#test each stock to see if we want to buy it
+		for ticker in tickers[5:]:
+			#get current state we want to look at
+			inDate = datetime.today()-timedelta(365-day)
+			#gather relevant variables
 			try:
-				previousPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
-				break
+				currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)
+				if len(currentPrice) == 0:
+					continue
 			except:
-				deltaChange += 1
-				print("Possible Loading Failure: If continues restart program...")
-		deltaChange = 0
-		while(1):
-			try:	
-				trendPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
-				break
-			except:
-				deltaChange += 1
-				print("Possible Loading Failure: If continues restart program...")
-		#get general trend for past 30 data points
-		trend = (currentPrice['Open'][0] - trendPrice)
-		#up from previous data point
-		previous = (currentPrice['Open'][0] - previousPrice)
-		maxDiff = (currentPrice['Open'][0] - currentPrice['High'][0])
-		minDiff = (currentPrice['Open'][0] - currentPrice['Low'][0])
-		maxMin =  (currentPrice['Low'][0] - currentPrice['High'][0])
+				#skip to next iteration
+				continue
+			deltaChange = 0
+			while(1):
+				try:
+					previousPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(1+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+					break
+				except:
+					deltaChange += 1
+					if deltaChange > 5:
+						previousPrice = None
+						break
+			deltaChange = 0
+			while(1):
+				try:	
+					trendPrice = pdr.get_data_yahoo(ticker, (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), (inDate-timedelta(30+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)["Open"][0] 
+					break
+				except:
+					deltaChange += 1
+					if deltaChange > 5:
+						trendPrice = None
+						break
+			#check if good data
+			if trendPrice == None or previousPrice == None:
+				continue
+			#get general trend for past 30 data points
+			trend = (currentPrice['Open'][0] - trendPrice)
+			#up from previous data point
+			previous = (currentPrice['Open'][0] - previousPrice)
+			maxDiff = (currentPrice['Open'][0] - currentPrice['High'][0])
+			minDiff = (currentPrice['Open'][0] - currentPrice['Low'][0])
+			maxMin =  (currentPrice['Low'][0] - currentPrice['High'][0])
 
-		#now let us find closest match between test data and our trained model
-		mostSimilarEntry = None
-		diffChecker = float('inf')
-		differences = []
-		for entry in table:
-			#list differences
-			diffTrend = trend - entry['trend']
-			diffPrevious = previous - entry['previous']
-			diffMaxDiff = maxDiff - entry['maxDiff']
-			diffMinDiff = minDiff - entry['minDiff']
-			diffMaxMin = maxMin - entry['maxMin']
-			difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin))/400
-			if difference < diffChecker:
-				diffChecker = difference
-				mostSimilarEntry = entry
-		print(diffChecker, mostSimilarEntry)
+			#now let us find closest match between test data and our trained model
+			mostSimilarEntry = None
+			diffChecker = float('inf')
+			differences = []
+			for entry in table:
+				#list differences
+				diffTrend = trend - entry['trend']
+				diffPrevious = previous - entry['previous']
+				diffMaxDiff = maxDiff - entry['maxDiff']
+				diffMinDiff = minDiff - entry['minDiff']
+				diffMaxMin = maxMin - entry['maxMin']
+				difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin))/400
+				if difference < diffChecker:
+					diffChecker = difference
+					mostSimilarEntry = entry
+			if (diffChecker < 0.0075 and mostSimilarEntry['profit'] > 75) or (diffChecker < 0.02 and mostSimilarEntry['profit'] > 150):
+				goodBuys += 1
+			print(diffChecker, mostSimilarEntry)
 
+	print("Good Buys: " + str(goodBuys))
 	print('Testing Done')
