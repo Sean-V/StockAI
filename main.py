@@ -1,3 +1,11 @@
+'''
+Sean Vanderbach
+Nicholas Palmer
+5/1/2019
+AI Practicum: StockAI
+'''
+
+
 #import random to get random trades
 import random
 #import usability of graphs
