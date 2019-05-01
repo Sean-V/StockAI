@@ -337,17 +337,25 @@ if 'results' in ARGS:
 	plt.show()
 
 	#get data for ticker profits
+	#get data for total shares bought and sold of each ticker
 	tickerProfitActual = {}
 	tickerProfitMax = {}
+	bought = {}
+	sold = {}
 	#set default ticker profit
 	for ticker in tickers[5:]:
 		tickerProfitActual[ticker] = 0
 		tickerProfitMax[ticker] = 0
+		bought[ticker] = 0
+		sold[ticker] = 0
 
 	#get total profit per ticker
+	#get total shares bought and sold per ticker
 	for buy in buyList:
+		bought[buy[0]] += 1
 		keyMatch = (buy[0], buy[1].index[0].strftime('%Y-%m-%d'))
 		if keyMatch in sellList:
+			sold[keyMatch[0]] += 1
 			tickerProfitActual[keyMatch[0]] += sellList[keyMatch][0][5]
 			tickerProfitMax[keyMatch[0]] += sellList[keyMatch][1][5]
 		else:
@@ -364,4 +372,16 @@ if 'results' in ARGS:
 	ax3.set_xticklabels([''] + list(tickerProfitActual.keys()))
 	ax3.axhline(y=0, color = 'black')
 	ax3.legend()
+	plt.show()
+
+	#get graph for ticker profits
+	fig4, ax4 = plt.subplots()
+	ax4.set_title("Shares Bought vs Sold per Ticker")
+	ax4.set_xlabel("Ticker")
+	ax4.set_ylabel("Total Shares Bought and Sold")
+	ax4.bar([i+0.1 for i in range(5)], sold.values(), width = 0.2, color = 'red', label = 'Shares Sold')
+	ax4.bar([i-0.1 for i in range(5)], bought.values(), width = 0.2, color = 'blue', label = 'Shares Bought')
+	ax4.set_xticklabels([''] + list(tickerProfitActual.keys()))
+	ax4.axhline(y=0, color = 'black')
+	ax4.legend()
 	plt.show()
