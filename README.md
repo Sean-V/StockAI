@@ -1,5 +1,23 @@
 # StockAI
 
+##  Prerequisites
+
+Imports include:
+* random
+* matplotlib.pyplot
+* pickle
+* sys
+* os
+* pandas
+* numpy
+* time
+* fic_yahoo_finance
+  * $ pip install fix_yahoo_finance
+* pandas_datareader
+  * $ pip install pandas-datareader
+* datetime
+* fileinput
+
 ## Running Code
 
 In order to run the code, go into the directory where main.py is located and run "python main.py <arguments>" in the terminal. Note the code is capable of handling multiple arguments at once.
