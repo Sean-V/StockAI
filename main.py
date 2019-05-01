@@ -335,3 +335,33 @@ if 'results' in ARGS:
 	ax2.plot(buys, boughtDates, color = 'blue', label = 'Actual Timespan')
 	ax2.legend()
 	plt.show()
+
+	#get data for ticker profits
+	tickerProfitActual = {}
+	tickerProfitMax = {}
+	#set default ticker profit
+	for ticker in tickers[5:]:
+		tickerProfitActual[ticker] = 0
+		tickerProfitMax[ticker] = 0
+
+	#get total profit per ticker
+	for buy in buyList:
+		keyMatch = (buy[0], buy[1].index[0].strftime('%Y-%m-%d'))
+		if keyMatch in sellList:
+			tickerProfitActual[keyMatch[0]] += sellList[keyMatch][0][5]
+			tickerProfitMax[keyMatch[0]] += sellList[keyMatch][1][5]
+		else:
+			tickerProfitActual[keyMatch[0]] -= buy[1]['Open'][0]
+			tickerProfitMax[keyMatch[0]] -= buy[1]['Open'][0]
+
+	#get graph for ticker profits
+	fig3, ax3 = plt.subplots()
+	ax3.set_title("Actual Ticker Profit vs Ideal Ticker Profit")
+	ax3.set_xlabel("Ticker")
+	ax3.set_ylabel("Total Ticker Profit")
+	ax3.bar([i+0.1 for i in range(5)], tickerProfitMax.values(), width = 0.2, color = 'red', label = 'Ideal Ticker Profits')
+	ax3.bar([i-0.1 for i in range(5)], tickerProfitActual.values(), width = 0.2, color = 'blue', label = 'Actual Ticker Profits')
+	ax3.set_xticklabels([''] + list(tickerProfitActual.keys()))
+	ax3.axhline(y=0, color = 'black')
+	ax3.legend()
+	plt.show()
