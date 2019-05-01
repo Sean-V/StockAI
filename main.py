@@ -39,7 +39,7 @@ if 'update' in ARGS:
 	for ticker in tickers:
 		#attempt to grab data from yahoo finance
 		try:
-			data = pdr.get_data_yahoo(ticker, '2017-01-01', '2019-01-01', False, 'ticker', False, True)
+			data = pdr.get_data_yahoo(ticker, '2016-01-01', '2019-01-01', False, 'ticker', False, True)
 		except:
 			data = {}
 			print("Failed to acquire data for ticker {}.".format(ticker))
@@ -84,6 +84,7 @@ if 'train' in ARGS:
 		maxDiff = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('High')[buyStock][1])
 		minDiff = (trainDict[randomStock].getDataType('Open')[buyStock][1] - trainDict[randomStock].getDataType('Low')[buyStock][1])
 		maxMin = (trainDict[randomStock].getDataType('Low')[buyStock][1] - trainDict[randomStock].getDataType('High')[buyStock][1])
+		weight = 0
 		#total profit
 		profit = (trainDict[randomStock].getDataType('Open')[sellStock][1] - trainDict[randomStock].getDataType('Open')[buyStock][1])
 
@@ -94,7 +95,8 @@ if 'train' in ARGS:
 			"maxDiff" : maxDiff,
 			"minDiff" : minDiff,
 			"maxMin" : maxMin,
-			"profit" : profit
+			"profit" : profit,
+			"weight" : weight
 		}
 		
 		table.append(features)
@@ -105,8 +107,8 @@ if 'train' in ARGS:
 
 	print("Training Done")
 
-#only do this if we want to test our data
-if 'test' in ARGS:
+#only do this if we want to test our data with buys
+if 'buys' in ARGS:
 	#get stock dictionary of classes
 	DataFile = open('Data.pickle', 'rb')
 	stockDict = pickle.load(DataFile)
@@ -122,15 +124,16 @@ if 'test' in ARGS:
 	currentMoney = 100000
 	currentStocks = []
 	goodBuys = 0
+	goodBuyList = []
 
 	#run through a year of data
-	for day in range(1,365):
-		print("progress: " + str(day))
+	for day in range(0,365):
+		print("progress: " + str(day+1) + "/365")
 		print("good buys: " + str(goodBuys))
 		#test each stock to see if we want to buy it
 		for ticker in tickers[5:]:
 			#get current state we want to look at
-			inDate = datetime.today()-timedelta(365-day)
+			inDate = datetime(2016, 1, 1)-timedelta(365-day)
 			#gather relevant variables
 			try:
 				currentPrice = pdr.get_data_yahoo(ticker, inDate.strftime('%Y-%m-%d'), inDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)
@@ -181,13 +184,114 @@ if 'test' in ARGS:
 				diffMaxDiff = maxDiff - entry['maxDiff']
 				diffMinDiff = minDiff - entry['minDiff']
 				diffMaxMin = maxMin - entry['maxMin']
-				difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin))/400
+				difference = (abs(diffTrend) + abs(diffPrevious) + abs(diffMaxDiff) + abs(diffMinDiff) + abs(diffMaxMin) + entry['weight'])/500
 				if difference < diffChecker:
 					diffChecker = difference
 					mostSimilarEntry = entry
-			if (diffChecker < 0.0075 and mostSimilarEntry['profit'] > 75) or (diffChecker < 0.02 and mostSimilarEntry['profit'] > 150):
+			if (diffChecker < 0.005 and mostSimilarEntry['profit'] > 75) or (diffChecker < 0.01 and mostSimilarEntry['profit'] > 300):
 				goodBuys += 1
+				#store good buy
+				goodBuyList.append([ticker, currentPrice, mostSimilarEntry])
 			print(diffChecker, mostSimilarEntry)
 
+	#pickle good buys
+	buyFile = open('buys.pickle', 'wb')
+	pickle.dump(goodBuyList, buyFile)
+	buyFile.close()
 	print("Good Buys: " + str(goodBuys))
-	print('Testing Done')
+
+	print('Buying Done')
+
+#only do this if we want to test our data with sells
+if 'sells' in ARGS:
+	buyFile = open('buys.pickle', 'rb')
+	goodBuysList = pickle.load(buyFile)
+	buyFile = buyFile.close()
+	sells = {}
+	print("Buys to parse: " + str(len(goodBuysList)))
+	#for each day we look at
+	for day in range(1, 730):
+		print("day: " + str(day))
+		print("sells: " + str(len(sells)))
+		#get closing data of stock in question
+		for index, [ticker, buyData, similarFeatures] in enumerate(goodBuysList):
+			#look two years out from each buy
+			sellDate = (buyData['Open'].index[0] + timedelta(day))
+
+			#lets create a 4 point system
+			'''
+			based on profit
+			difference between high and open
+			difference between high and close
+			general trend (increasing is good decreasing is bad)
+			'''
+
+			#get current data for what we say is the current day
+			try:
+				currentData = pdr.get_data_yahoo(ticker, sellDate.strftime('%Y-%m-%d'), sellDate.strftime('%Y-%m-%d'), False, 'ticker', False, True)
+			except:
+				continue
+			#get point 1: based on profit 
+			if (currentData['Open'][0] - buyData['Open'][0]) > (0.5 * similarFeatures['profit']):
+				pointOne = 1
+			else:
+				pointOne = 0
+
+			#get point 2: difference between high and open
+			OHDiff = currentData['High'][0] - currentData['Open'][0]
+			if(OHDiff < 0.50):
+				pointTwo = 1
+			else:
+				pointTwo = 0
+				
+			#get point 3: difference between high and close
+			CHDiff = currentData['High'][0] - currentData['Close'][0]
+			if (CHDiff/currentData['High'][0]) < 0.1:
+				pointThree = 0
+			else:
+				pointThree = 1
+
+			#get point 4: general trend (increasing is good decreasing is bad)
+			deltaChange = 0
+			try:
+				previousPrice = pdr.get_data_yahoo(ticker, (sellDate-timedelta(5+deltaChange)).strftime('%Y-%m-%d'), (sellDate-timedelta(5+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)
+			except:
+				while(1):
+					try:
+						previousPrice = pdr.get_data_yahoo(ticker, (sellDate-timedelta(5+deltaChange)).strftime('%Y-%m-%d'), (sellDate-timedelta(5+deltaChange)).strftime('%Y-%m-%d'), False, 'ticker', False, True)
+						break
+					except:
+						deltaChange += 1
+			trend = (currentData['Open'][0] - previousPrice['Open'][0]) 
+			if trend < 0:
+				pointFour = 1
+			else:
+				pointFour = 0
+
+			#check if sum of variables is > 2
+			pointSum =  pointTwo + pointThree + pointFour
+			if (pointSum >= 2 and (currentData['Open'][0] - buyData['Open'][0]) > (0.1 * similarFeatures['profit'])) or pointOne == 1:
+				#data in sells includes ticker, buy price, buy date, sell price, sell date, profit, and if it was worth buying
+				#this data includes actual sold data and best sold data for 2 year time period
+				worthBuy = (currentData['Open'][0] - buyData['Open'][0]) > 5
+				if (ticker, buyData['Open'].index[0].strftime('%Y-%m-%d')) not in sells:
+					sells[(ticker, buyData['Open'].index[0].strftime('%Y-%m-%d'))] = []
+					sells[(ticker, buyData['Open'].index[0].strftime('%Y-%m-%d'))].append([ticker, buyData['Open'][0], buyData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0], currentData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0] - buyData['Open'][0], worthBuy])
+					sells[(ticker, buyData['Open'].index[0].strftime('%Y-%m-%d'))].append([ticker, buyData['Open'][0], buyData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0], currentData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0] - buyData['Open'][0], worthBuy])
+				else:
+					if sells[(ticker, buyData['Open'].index[0].strftime('%Y-%m-%d'))][1][5] < (currentData['Open'][0] - buyData['Open'][0]):
+						sells[(ticker, buyData['Open'].index[0].strftime('%Y-%m-%d'))][1] = [ticker, buyData['Open'][0], buyData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0], currentData['Open'].index[0].strftime('%Y-%m-%d'), currentData['Open'][0] - buyData['Open'][0], worthBuy]
+
+	#pickle sells
+	sellFile = open('sells.pickle', 'wb')
+	pickle.dump([sells, goodBuysList], sellFile)
+	sellFile.close()
+	
+if 'results' in ARGS:
+	sellFile = open('sells.pickle', 'rb')
+	sellList, buyList = pickle.load(sellFile)
+	sellFile = sellFile.close()	
+
+	print(sellList)
+	print(buyList)
+
