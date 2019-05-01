@@ -211,8 +211,6 @@ if 'sells' in ARGS:
 	print("Buys to parse: " + str(len(goodBuysList)))
 	#for each day we look at
 	for day in range(1, 730):
-		print("day: " + str(day))
-		print("sells: " + str(len(sells)))
 		#get closing data of stock in question
 		for index, [ticker, buyData, similarFeatures] in enumerate(goodBuysList):
 			#look two years out from each buy
@@ -292,6 +290,40 @@ if 'results' in ARGS:
 	sellList, buyList = pickle.load(sellFile)
 	sellFile = sellFile.close()	
 
-	print(sellList)
-	print(buyList)
+	#get profit date
+	buys = [x for x in range(len(sellList))]
+	boughtProfits = []
+	maxProfits = []
+	for entry in sellList:
+		boughtProfits.append(sellList[entry][0][5])
+		maxProfits.append(sellList[entry][1][5])
 
+	#plot profits
+	fig, ax = plt.subplots()
+	ax.set_title("Actual Buy/Sell vs Ideal Buy/Sell")
+	ax.set_xlabel("Sell Number")
+	ax.set_ylabel("Profit")
+	ax.plot(buys, maxProfits, color = 'red', label = 'Ideal Buy/Sell Profit')
+	ax.plot(buys, boughtProfits, color = 'blue', label = 'Actual Buy/Sell Profit')
+	ax.legend()
+	
+	#get date data
+	boughtDates = []
+	maxDates = []
+	for entry in sellList:
+		boughtSellDate = datetime.strptime(sellList[entry][0][4], "%Y-%m-%d")
+		boughtBuyDate = datetime.strptime(sellList[entry][0][2], "%Y-%m-%d")
+		boughtDates.append((boughtSellDate - boughtBuyDate).days)
+		SoldSellDate = datetime.strptime(sellList[entry][1][4], "%Y-%m-%d")
+		SoldBuyDate = datetime.strptime(sellList[entry][1][2], "%Y-%m-%d")
+		maxDates.append((SoldSellDate - SoldBuyDate).days)
+
+	#plot timespan differences
+	fig2, ax2 = plt.subplots()
+	ax2.set_title("Actual Timespan vs Ideal Timespan")
+	ax2.set_xlabel("Sell Number")
+	ax2.set_ylabel("Difference in Buy and Sell Date")
+	ax2.plot(buys, maxDates, color = 'red', label = 'Ideal Timespan')
+	ax2.plot(buys, boughtDates, color = 'blue', label = 'Actual Timespan')
+	ax2.legend()
+	plt.show()
